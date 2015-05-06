@@ -13,7 +13,7 @@ def roulette(weights):
         if total>=mark:return i
     #if for some reason this fails
     #return something for sake of future computation
-    return random.choice(range(len(weights)))
+    raise Exception("No index selected")
 
 class Vertex:
     """Implementation of a single vertex in a graph"""
@@ -81,10 +81,17 @@ class Graph:
     def get_adjacent(self,vertex):
         "Return a dict of adjacent nodes and the weights to get there"
         adjacent={}
+        def other(v,edge):
+            edge=list(edge)
+            edge.remove(v)
+            return edge[0]
         for edge in self.edges.keys():
             if vertex in edge:
-                adjacent[edge]=self.edges[edge]
-        if len(adjacent.keys())==0:return None
+                oth=other(vertex,edge)
+                #print('Found adjacent',vertex,oth)
+                adjacent[oth]=self.edges[edge]
+        #print('length of adjacent',(adjacent))
+        #input()
         return adjacent
     def get_degree(self,vertex):
         degree=0

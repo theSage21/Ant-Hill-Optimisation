@@ -7,7 +7,7 @@ class Ant:
         self.name=name
         self.position=position
         self.alive=True
-        self.path=[]
+        self.path=[self.position]
         self.found=False#found end. analogus to found food
     def found_end(self):self.found=True
     def kill(self):
@@ -38,12 +38,13 @@ class Ant:
         total=sum(weight_list)
         probability_of_selection=[i/total for i in weight_list]
         chosen_node=acceptable[roulette(probability_of_selection)]
+        #print('Chosen',chosen_node)
         self.set_position(chosen_node)
 
 class AntHill:
     """Additional methods provided on the graph class to impolement
     an ant hill optimisation technique"""
-    def __init__(self,graph,start,end,number_of_ants=1000,evaporation_rate=0.1):
+    def __init__(self,graph,start,end,number_of_ants=100,evaporation_rate=0.1):
         self.graph=graph
         self.start=start
         self.end=end
@@ -54,38 +55,47 @@ class AntHill:
         """Evaporates pheromone from the entire graph"""
         for edge in self.pheromones.keys():
             self.pheromones[edge]-=self.evaporation_rate
+            if self.pheromones[edge]<0:self.pheromones[edge]=0.01
     def __initial_pheromone(self):
         """Deposits initial level of pheromone on the entire map"""
         pheromone={}
         deposit=self.number_of_ants/self.graph.get_shortest_path(self.start,self.end)
+        #print('Default deposit',deposit)
         for edge in self.graph.get_edges():
             pheromone[edge]=deposit
         return pheromone
     def __wave_of_ants(self,ants):
+        end_found=False
+        found_path=[]
         while True in (ant.is_alive() for ant in ants):
             self.__evaporate()
+            #print('Pheromones',self.pheromones)
             for ant in (i for i in ants if i.is_alive()):
                 pos=ant.get_position()
                 #conditions to kill ants
                 if pos==self.end:
+                    end_found=True
+                    path=ant.get_path()
+                    self.__deposit_pheromone(path)
+                    found_path.append(path)
                     ant.found_end()
+                    ant.kill()
                     continue
                 adjacent=self.graph.get_adjacent(pos)
-                if adjacent==None:
+                #print('adjacent',ant.name,adjacent)
+                if adjacent=={}:
                     ant.kill()
                     continue
                 #we have adjacent edges
                 weights={}
-                for edge in adjacent.keys():
-                    weights[edge]=(adjacent[edge],self.pheromones[edge])
+                for vertex in adjacent.keys():
+                    edge_weight=adjacent[vertex]
+                    edge=frozenset((vertex,pos))
+                    phero_weight=self.pheromones[edge]
+                    weights[vertex]=(edge_weight,phero_weight)
                 ant.move_to_next_node(weights,self.alpha,self.beta)
         #---all ants are dead
-        found_paths=[]
-        for ant in (i for i in ants if i.found):#those ants which found end
-            path=ant.get_path()
-            self.__deposit_pheromone(path)
-            found_path.append(path)
-        return found_paths
+        return found_path,end_found
     def __deposit_pheromone(self,path):
         """Deposits pheromone on the path specified"""
         length=self.graph.get_path_length(path)
@@ -93,37 +103,42 @@ class AntHill:
         else:value=0
         #----deposit on path
         last=None
+        #print(path)
         for node in path:
+            #print('Node',node)
             if last!=None:
                 edge=frozenset((last,node))
                 self.pheromones[edge]+=value
             last=node
-    def __generate_ants(self,number):
+    def __generate_ants(self):
         ants=[]
-        for i in range(number):
+        for i in range(self.number_of_ants):
             ant=Ant(i,self.start)
             ants.append(ant)
         return ants
-    def run(self,beta=3,alpha=1,rho=0.5):
+    def run(self,beta=1,alpha=1,rho=0.5):
         self.alpha=alpha
         self.beta=beta
         self.rho=rho
         #----------
         iteration=0
         while True:
-            ants=self.__generate_ants(self.number_of_ants)
-            paths=self.__wave_of_ants(ants)
+            ants=self.__generate_ants()
+            paths,end_found=self.__wave_of_ants(ants)
             #--------
             lengths=[self.graph.get_path_length(i) for i in paths]
-            print(iteration,min(lengths),len(paths))
+            try:
+                print(iteration,min(lengths),end_found)
+            except:print(iteration,end_found)
             iteration+=1
 def test():
-    g=Graph(20,0.8,10)
+    g=Graph(70,0.8,10)
     vertices=g.get_nodes()
     start=random.choice(vertices)
     end=random.choice(vertices)
     while end==start:
         end=random.choice(vertices)
+    print('djikstras: ',g.get_shortest_path(start,end))
     hill=AntHill(g,start,end)
     hill.run()
 if __name__=='__main__':
