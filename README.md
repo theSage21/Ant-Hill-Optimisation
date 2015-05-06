@@ -1,9 +1,11 @@
 Ant Hill Optimization
 =====================
 
-Srijan Sehgal
--------------
+Srijan Sehgal-Theory
+Arjoonn Sharma-Code
 
+Theory
+------
 Ant hill optimization for network routing.
 
 It is an algorithm based on the behaviour of the real ants in finding a shortest path from a source to the food.
